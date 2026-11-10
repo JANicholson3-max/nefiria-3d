@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The Nefiria · Bow deck 3D model</title>
+<meta name="robots" content="noindex">
+<style>html,body{margin:0;padding:0}</style>
+</head>
+<body>
+<style>
+  /* Layout: full-height 3D viewer with a narrow notes column (stacks below on phones).
+     Single dark look on purpose, matching the DeckPlan editor's navy and magenta. */
+  :root {
+    --bg: #0F1B26; --panel: #16283A; --panel2: #1D3348; --line: #2B4763;
+    --text: #E8EEF2; --dim: #8FA6BA; --accent: #B62A78; --warn: #F0C27A;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; }
+  .app { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) 330px; }
+  .stage { position: relative; min-width: 0; min-height: 0; }
+  #view { position: absolute; inset: 0; }
+  #view canvas { display: block; }
+  .bar { position: absolute; top: 12px; left: max(12px, env(safe-area-inset-left, 0px)); right: 12px;
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center; pointer-events: none; }
+  .bar > * { pointer-events: auto; }
+  .bar h1 { font: 600 12px/1 var(--mono); letter-spacing: 2px; text-transform: uppercase; margin: 0 10px 0 0;
+    color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+  .bar h1 span { color: var(--accent); }
+  button, label.tog { font: 12px/1 var(--mono); color: var(--text); background: var(--panel2);
+    border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; cursor: pointer; }
+  button:hover, label.tog:hover { border-color: var(--dim); }
+  button:focus-visible, label.tog:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); }
+  label.tog { display: inline-flex; gap: 6px; align-items: center; }
+  label.tog input { margin: 0; accent-color: var(--accent); }
+  .hint { position: absolute; bottom: 10px; left: max(12px, env(safe-area-inset-left, 0px)); font: 11px var(--mono);
+    color: var(--dim); background: color-mix(in srgb, var(--bg) 80%, transparent); padding: 5px 8px; border-radius: 5px; }
+  .tag { font: 11px/1.3 var(--mono); color: var(--text); background: color-mix(in srgb, var(--panel) 88%, transparent);
+    border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; white-space: nowrap; pointer-events: none; }
+  .tag.warn { border-color: var(--warn); color: var(--warn); }
+  aside { background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto;
+    padding-block: 18px 24px; padding-left: 18px; padding-right: max(18px, env(safe-area-inset-right, 0px)); }
+  aside h2 { font: 600 11px/1 var(--mono); letter-spacing: 2px; text-transform: uppercase; color: var(--dim); margin: 0 0 10px; }
+  aside section + section { margin-top: 22px; }
+  aside p, aside li { line-height: 1.5; margin: 0; }
+  aside ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
+  .levels { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font: 12px var(--mono); }
+  .levels dt { color: var(--dim); }
+  .levels dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .check li::marker { color: var(--warn); }
+  .src { font: 11px/1.5 var(--mono); color: var(--dim); }
+  @media (max-width: 760px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: 62vh auto; height: auto; }
+    aside { border-left: 0; border-top: 1px solid var(--line); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  }
+  /* notes column hidden: the model takes the whole page */
+  .app.nonotes { grid-template-columns: minmax(0, 1fr); }
+  @media (max-width: 760px) { .app.nonotes { grid-template-rows: 100%; height: 100%; } }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;600&display=swap">
+
+<div class="app nonotes" id="app">
+  <div class="stage">
+    <div id="view" role="img" aria-label="3D model of the Nefiria's bow, option E: lower-deck hallway, 80 cm landing, 3 m wide solid stairs to the bow platform, full-width side stairs from the platform to the main deck with a flat walkway at the top, and the engine-room machinery below"></div>
+    <div class="bar">
+      <h1>Nefiria <span>bow · E</span></h1>
+      <button id="v-overview" aria-pressed="true">Overview</button>
+      <button id="v-hall" aria-pressed="false">From the hallway</button>
+      <button id="v-top" aria-pressed="false">From above</button>
+      <button id="v-side" aria-pressed="false">From the side</button>
+      <label class="tog"><input type="checkbox" id="t-hull" checked> Hull sides</label>
+      <label class="tog"><input type="checkbox" id="t-main" checked> Main deck</label>
+      <label class="tog"><input type="checkbox" id="t-plat" checked> Bow platform</label>
+      <label class="tog"><input type="checkbox" id="t-tags"> Labels</label>
+    </div>
+    <div class="hint">Drag to turn · right-drag or two fingers to move · scroll or pinch to zoom</div>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js";
+import { CSS2DRenderer, CSS2DObject } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/renderers/CSS2DRenderer.js";
+
+/* ---------- saved design (4940, exported 22 Oct 2026 19:07), plan metres ----------
+   x runs stern → bow, y across the beam (0 = port), centreline y = 3.8 */
+// heights are measured from the bottom of the boat
+const FLOOR = 1.0;          // cabin floor: top of the 1 m double bottom
+const P = 2.5;              // bow platform = engine-room ceiling, 2.5 m above the bottom
+const MAIN = FLOOR + 2.5;   // main deck floor = cabin floor + lower deck height (boat.deckH)
+const HALL_H = 2.2;         // lower-deck wall height (measured hallway height)
+const HULL_TOP = MAIN, DOOR_H = 2.0;
+
+// hull outline forward of 32 m from the marine engineer's fore-end plan (Cairo
+// Marine Design, 'ihab fore end-Model2'): half-breadths at deck read from its
+// body plan at each frame and smoothed between them; full 7.6 m beam aft of 32 m
+const HULL = [[26,0],[32.0,0.0],[32.25,0.014],[32.5,0.028],[32.75,0.043],[33.0,0.063],[33.25,0.088],[33.5,0.116],[33.75,0.149],[34.0,0.185],[34.25,0.225],[34.5,0.27],[34.75,0.318],[35.0,0.37],[35.25,0.427],[35.5,0.487],[35.75,0.552],[36.0,0.619],[36.25,0.691],[36.5,0.769],[36.75,0.851],[37.0,0.939],[37.25,1.032],[37.5,1.127],[37.75,1.227],[38.0,1.332],[38.25,1.443],[38.5,1.559],[38.75,1.68],[39.0,1.805],[39.25,1.933],[39.5,2.064],[39.75,2.201],[40.0,2.348],[40.25,2.506],[40.5,2.673],[40.75,2.847],[41.0,3.026],[41.25,3.213],[41.5,3.407],[41.75,3.604],[42.0,3.8],[41.75,3.996],[41.5,4.193],[41.25,4.387],[41.0,4.574],[40.75,4.753],[40.5,4.927],[40.25,5.094],[40.0,5.252],[39.75,5.399],[39.5,5.536],[39.25,5.667],[39.0,5.795],[38.75,5.92],[38.5,6.041],[38.25,6.157],[38.0,6.268],[37.75,6.373],[37.5,6.473],[37.25,6.568],[37.0,6.661],[36.75,6.749],[36.5,6.831],[36.25,6.909],[36.0,6.981],[35.75,7.048],[35.5,7.113],[35.25,7.173],[35.0,7.23],[34.75,7.282],[34.5,7.33],[34.25,7.375],[34.0,7.415],[33.75,7.451],[33.5,7.484],[33.25,7.512],[33.0,7.537],[32.75,7.557],[32.5,7.572],[32.25,7.586],[32.0,7.6],[26,7.6]];
+
+// lower-deck walls aft of the bulkhead [x1, y1, x2, y2, thickness]
+// Read from design 4940 on the live site (DeckPlan v35) on 10 Nov 2026. A sixth
+// entry lists door openings as [from, to] along the wall (y for a wall across the
+// boat, x for a fore-and-aft wall), taken from the door fittings in the design.
+const LOWER_WALLS = [
+  [26.51,0.06,26.51,3.3,.08,[[1.15,2.15],[2.4,3.2]]],[26.49,4.3,26.49,7.54,.08,[[4.4,5.2],[5.45,6.45]]],
+  [26,3.3,32,3.3,.08,[[31,31.95]]],[26,4.26,32,4.26,.08,[[31,31.95]]],
+  [27,4.3,27,5.3,.03],[26.51,2.3,27.01,2.3,.03],[26.49,5.3,27,5.3,.03],[27,2.3,27,3.3,.03],
+  [30,0.08,30,3.25,.08,[[1.15,2.15],[2.4,3.2]]],[29.99,4.26,29.99,7.52,.08,[[4.4,5.2],[5.45,6.45]]],
+  [27.9,6.59,28.5,6.59,.05],[27.9,1,28.5,1,.05],
+  [28.5,4.3,28.5,7.52,.08],[28.5,0.08,28.5,3.3,.08],
+  [29.5,4.3,29.5,5.3,.03],[29.5,5.3,30,5.3,.03],[29.5,2.3,29.5,3.3,.03],[29.5,2.3,30,2.3,.03],
+  [28.5,6.6,29.1,6.6,.05],[28.5,1,29.1,1,.05],
+];
+// fittings in the same area, as [type, x0, x1, y0, y1] footprints from the design
+const LOWER_FITTINGS = [
+  ["bed", 30.8, 31.8, 0.1, 2.1], ["bed", 30.8, 31.8, 5.5, 7.5],
+  ["toilet", 27.3, 27.8, 2.5, 3.3], ["toilet", 27.3, 27.8, 4.3, 5.1], ["toilet", 28.8, 29.3, 2.5, 3.3], ["toilet", 28.8, 29.3, 4.3, 5.1],
+  ["sink", 28.53, 29.08, 5.48, 6.48], ["sink", 27.93, 28.48, 5.28, 6.48], ["sink", 28.53, 29.08, 1.08, 2.08], ["sink", 27.93, 28.48, 1.08, 2.28],
+  ["shower", 28.6, 29.9, 6.7, 7.5], ["shower", 26.6, 28.4, 6.7, 7.5], ["shower", 26.6, 28.4, 0.1, 0.9], ["shower", 28.6, 29.9, 0.1, 0.9],
+];
+// Option E stair geometry
+const LAND_D = .8;            // landing depth between the hallway doorway and the first step
+const HALL_W = 3;             // hallway stairs and landing width
+const HALL_X0 = 32 + LAND_D;  // first riser
+const HALL_N = 8, HALL_RUN = .3;
+// the last step up lands on the platform itself, so a flight of N steps has N - 1 treads
+const HALL_TOP = HALL_X0 + (HALL_N - 1) * HALL_RUN;   // where the flight comes out on the platform (34.9)
+// side stairs: from the edge of the hallway-stair opening out to the hull side,
+// so their outer edge follows the hull's curve
+const SIDE_N = 5, SIDE_RUN = .4, SIDE_LEN = (SIDE_N - 1) * SIDE_RUN;
+const SIDE_IN = 3.8 - HALL_W / 2;               // 2.3: inner edge on the port side
+const SIDE_TOP = HALL_TOP - SIDE_LEN;           // 33.2: top of the side stairs
+// bow deck stairways. Each is given by the centre of its bottom edge, the
+// direction it climbs, its width at the bottom and top, and its steps. These do
+// not match the saved items one to one (see the notes on the page).
+const STAIRS = [
+  // hallway → bow platform: 3 m wide, centred on the hallway
+  { name: "Hallway stairs", bottom: [HALL_X0, 3.8], dir: [1, 0], wB: HALL_W, wT: HALL_W, rise: P - FLOOR, stepRise: (P - FLOOR) / HALL_N, stepRun: HALL_RUN, base: FLOOR, closed: true },
+  // the side stairs (bow platform → main deck) follow the hull and are built
+  // separately below
+];
+const steps = (s) => Math.max(1, Math.ceil(s.rise / s.stepRise - 1e-9));
+// width of a flight `k` steps up from its foot
+const widthAt = (s, k) => s.wB + (s.wT - s.wB) * k / steps(s);
+
+// platform outline: the hull forward of the bulkhead, minus the opening for the
+// hallway flight (its top tread is level with the platform) and the landing
+const hallway = STAIRS[0];
+const hw0 = HALL_W / 2;
+const PLATFORM = [
+  ...HULL.filter(([x]) => x >= 32),
+  [32, 3.8 + hw0], [HALL_TOP, 3.8 + hw0], [HALL_TOP, 3.8 - hw0], [32, 3.8 - hw0],
+];
+// the cabin area aft of the bulkhead, where the double bottom is
+const CABINS = [[26,0],[32,0],[32,7.6],[26,7.6]];
+// landing at cabin-floor level between the hallway doorway and the flight, as
+// wide as the flight
+const LANDINGS = [[[32, 3.8 - hw0], [HALL_X0, 3.8 - hw0], [HALL_X0, 3.8 + hw0], [32, 3.8 + hw0]]];
+// flat walkways at main-deck height from the top of each side stair aft to the
+// deck edge at 32 m, from the hull side in to the stair's inner edge
+const hullYAt = (x) => { // port hull side at x, interpolated
+  const pts = HULL.filter((pt) => pt[1] < 3.8 && pt[0] >= 32);
+  for (let i = 0; i < pts.length - 1; i++) if (x >= pts[i][0] && x <= pts[i + 1][0]) {
+    const t = (x - pts[i][0]) / (pts[i + 1][0] - pts[i][0]); return pts[i][1] + t * (pts[i + 1][1] - pts[i][1]);
+  }
+  return 0;
+};
+const WALK_PORT = [
+  ...HULL.filter((pt) => pt[1] < 3.8 && pt[0] >= 32 && pt[0] < SIDE_TOP),
+  [SIDE_TOP, hullYAt(SIDE_TOP)], [SIDE_TOP, SIDE_IN], [32, SIDE_IN],
+];
+const WALKS = [WALK_PORT, WALK_PORT.map(([x, y]) => [x, 7.6 - y])];
+// Once the engine room is closed off, the wedge beside each side of the flight,
+// between the stair's edge and the underside of the platform, is walled in. The
+// space under the flight stays open engine room.
+const SIDE_WALL_TOP = P - .12;
+// doors in the bulkhead at cabin level [y0, y1]: the hallway
+const DOORS = [[3.3, 4.26]];
+
+/* ---------- scene ---------- */
+const OX = 34, OY = 3.8;                       // scene origin in plan metres
+const S = (x, y, z = 0) => new THREE.Vector3(x - OX, z, y - OY); // plan (x, y) + height → world
+
+const host = document.getElementById("view");
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+host.appendChild(renderer.domElement);
+const labels = new CSS2DRenderer();
+labels.domElement.style.cssText = "position:absolute;inset:0;pointer-events:none";
+labels.domElement.hidden = true; // labels off unless ticked
+host.appendChild(labels.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color("#0F1B26");
+const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 200);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI * 0.495;
+
+scene.add(new THREE.HemisphereLight("#dfe9f3", "#2a3a48", 1.1));
+const sun = new THREE.DirectionalLight("#fff4e0", 1.6);
+sun.position.set(-6, 14, -8);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12 });
+scene.add(sun);
+{ const fill = new THREE.DirectionalLight("#ffffff", .9); fill.position.set(5, 7, 12); scene.add(fill); }   // lights the starboard side
+
+const mat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: .85, metalness: 0, ...extra });
+const M = {
+  floor: mat("#c9b99a"), platform: mat("#b58a5a"),
+  teak: mat("#6f4a2f", { roughness: .55 }), teakPlain: mat("#664329", { roughness: .55 }), door: mat("#8fbccb", { roughness: .6 }), hose: mat("#c2281f", { roughness: .5 }),
+  led: new THREE.MeshStandardMaterial({ color: "#ffe2b0", emissive: "#ffcf8a", emissiveIntensity: 1.2 }),
+  glass: mat("#bfe3ee", { transparent: true, opacity: .28, roughness: .1, side: THREE.DoubleSide, depthWrite: false }),
+  wall: mat("#eef0ea"), bulk: mat("#9aa6af"), // starboard side: solid navy gloss paint, as in the owner's picture; port side: see-through
+  hull: mat("#26365f", { roughness: .32, metalness: .15, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }),
+  hullGhost: mat("#d8e3ea", { transparent: true, opacity: .16, side: THREE.DoubleSide, depthWrite: false }),
+  winGlass: mat("#a9d8ea", { transparent: true, opacity: .45, roughness: .08, metalness: .2, side: THREE.DoubleSide, depthWrite: false }), gold: mat("#c9a45c", { roughness: .4, metalness: .6 }),
+  main: mat("#a9bccb", { transparent: true, opacity: .6, side: THREE.DoubleSide }),
+  hallStair: mat("#B62A78"), sideStair: mat("#4C8BB8"),
+  bottom: mat("#6f7f8c"), metal: mat("#3a4650", { roughness: .4, metalness: .6 }), tan: mat("#C9B583", { roughness: .6, metalness: .25 }), cream: mat("#E6DAB8", { roughness: .7 }), grey: mat("#8b9196", { roughness: .5, metalness: .4 }), dark: mat("#2c3034", { roughness: .6, metalness: .3 }), blue: mat("#2f6fb3", { roughness: .5 }), white: mat("#e9ecef", { roughness: .4, metalness: .3 }), wood: mat("#8a6a45", { roughness: .9 }), pipe: mat("#6f7478", { roughness: .5, metalness: .5 }), black: mat("#1d1f22", { roughness: .7 }), red: mat("#B8362B", { roughness: .5, metalness: .3 }), steel: mat("#9aa3ab", { roughness: .4, metalness: .6 }), dbl: mat("#7d93a6", { transparent: true, opacity: .35, depthWrite: false }),
+};
+
+// deck planking for the bow platform and the teak steps: 12.5 cm planks running
+// fore and aft, drawn once on a small canvas and repeated every metre
+{
+  const c = document.createElement("canvas"); c.width = c.height = 256;
+  const g = c.getContext("2d");
+  g.fillStyle = "#fff"; g.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 8; i++) {
+    g.fillStyle = `rgba(0,0,0,${.03 + (i * 5 % 3) * .05})`; g.fillRect(0, i * 32, 256, 32);
+    g.fillStyle = "rgba(0,0,0,.5)"; g.fillRect(0, i * 32, 256, 2);
+  }
+  const planks = new THREE.CanvasTexture(c);
+  planks.wrapS = planks.wrapT = THREE.RepeatWrapping;
+  planks.colorSpace = THREE.SRGBColorSpace;
+  planks.anisotropy = 8;
+  M.platform.map = M.teak.map = planks;
+}
+// a thin round bar between two points (handrails, gold lines, window frames)
+function rod(p0, p1, r, material, parent = scene) {
+  const d = new THREE.Vector3().subVectors(p1, p0);
+  const c = new THREE.Mesh(new THREE.CylinderGeometry(r, r, d.length(), 10), material);
+  c.position.copy(p0).addScaledVector(d, .5);
+  c.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize());
+  parent.add(c);
+  return c;
+}
+function slab(points, top, depth, material) {      // flat polygon slab with its top at `top`
+  const shape = new THREE.Shape(points.map(([x, y]) => new THREE.Vector2(x - OX, -(y - OY))));
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false });
+  g.rotateX(-Math.PI / 2);
+  const m = new THREE.Mesh(g, material);
+  m.position.y = top - depth;
+  m.receiveShadow = m.castShadow = true;
+  return m;
+}
+function wall([x1, y1, x2, y2, th], z0, z1, material) {
+  const len = Math.hypot(x2 - x1, y2 - y1);
+  const m = new THREE.Mesh(new THREE.BoxGeometry(len, z1 - z0, Math.max(th, .03)), material);
+  m.position.copy(S((x1 + x2) / 2, (y1 + y2) / 2, (z0 + z1) / 2));
+  m.rotation.y = -Math.atan2(y2 - y1, x2 - x1);
+  m.castShadow = m.receiveShadow = true;
+  return m;
+}
+function tag(text, x, y, z, warn = false) {
+  const el = document.createElement("div");
+  el.className = "tag" + (warn ? " warn" : "");
+  el.textContent = text;
+  const o = new CSS2DObject(el);
+  o.position.copy(S(x, y, z));
+  scene.add(o);
+}
+
+// bottom of the boat; the 1 m double bottom under the cabins with the cabin floor
+// on top; the engine room forward of the bulkhead is open from the bottom up to
+// the bow platform
+// the sides are vertical down to 0.4 m above the bottom, then turn in on a 400 mm
+// bilge radius to the flat bottom (engineer's body plan), so the floor is the
+// outline pulled in by that radius
+const BILGE = .4;
+const inset = (pt, d) => [pt[0], pt[1] < 3.8 ? Math.min(3.8, pt[1] + d) : Math.max(3.8, pt[1] - d)];
+scene.add(slab(HULL.map((pt) => inset(pt, BILGE)), 0, .05, M.bottom));
+// a wall across the boat cut to the hull's cross-section: vertical sides and the
+// rounded bilge corners at the bottom. `hb` is the half-width at that point.
+function sectionWall(x, hb, zTop, th) {
+  const r = BILGE, sh = new THREE.Shape();
+  sh.moveTo(-hb + r, 0); sh.lineTo(hb - r, 0);
+  sh.absarc(hb - r, r, r, -Math.PI / 2, 0, false);
+  sh.lineTo(hb, zTop); sh.lineTo(-hb, zTop); sh.lineTo(-hb, r);
+  sh.absarc(-hb + r, r, r, Math.PI, Math.PI * 1.5, false);
+  const g = new THREE.ExtrudeGeometry(sh, { depth: th, bevelEnabled: false, curveSegments: 12 });
+  g.rotateY(Math.PI / 2);
+  const m = new THREE.Mesh(g, M.bulk);
+  m.position.set(x - OX - th / 2, 0, 0);
+  m.castShadow = m.receiveShadow = true;
+  return m;
+}
+scene.add(slab(CABINS, FLOOR - .05, FLOOR - .1, M.dbl));
+scene.add(slab(CABINS, FLOOR, .05, M.floor));
+LANDINGS.forEach((l) => scene.add(slab(l, FLOOR, .08, M.floor)));
+const platform = slab(PLATFORM, P, .12, M.teak);   // same teak as the side stairs
+scene.add(platform);
+
+// hull sides (cut open at 26 m so you can see in)
+const hull = new THREE.Group();
+// each side strip is a vertical quad above the bilge plus four facets round it
+// window in the first (staff) cabin each side, between 30 m and the bulkhead:
+// 1.3 m wide, 1.3 m tall, sill 80 cm above the cabin floor, so its top is 20 cm
+// below the ceiling and 30 cm below the main-deck floor
+const WIN = { x0: 30.37, x1: 31.67, z0: FLOOR + .8, z1: FLOOR + 2.1 };
+// the upright part of the hull side along the cabins (26–32 m), with the window opening
+const cabinSide = (y, material) => {
+  const pane = (xa, xb, z0, z1, m, parent) => {
+    const g = new THREE.BufferGeometry().setFromPoints([S(xa, y, z0), S(xb, y, z0), S(xb, y, z1), S(xa, y, z0), S(xb, y, z1), S(xa, y, z1)]);
+    g.computeVertexNormals();
+    parent.add(new THREE.Mesh(g, m));
+  };
+  pane(26, WIN.x0, BILGE, HULL_TOP, material, hull);
+  pane(WIN.x1, 32, BILGE, HULL_TOP, material, hull);
+  pane(WIN.x0, WIN.x1, BILGE, WIN.z0, material, hull);
+  pane(WIN.x0, WIN.x1, WIN.z1, HULL_TOP, material, hull);
+  pane(WIN.x0, WIN.x1, WIN.z0, WIN.z1, M.winGlass, scene);
+  const c = [[WIN.x0, WIN.z0], [WIN.x1, WIN.z0], [WIN.x1, WIN.z1], [WIN.x0, WIN.z1]];
+  c.forEach(([x, z], i) => { const [x2, z2] = c[(i + 1) % 4]; rod(S(x, y, z), S(x2, y, z2), .025, M.steel); });
+  tag("Staff cabin window · 1.3 × 1.3 m", (WIN.x0 + WIN.x1) / 2, y, WIN.z1 + .45);
+};
+const rings = [];
+for (let k = 0; k <= 4; k++) { const t = k / 4 * Math.PI / 2; rings.push({ d: BILGE * (1 - Math.sin(t)), z: BILGE * (1 - Math.cos(t)) }); }
+rings.push({ d: 0, z: HULL_TOP });
+for (let i = 0; i < HULL.length - 1; i++) {
+  const [a, b] = [HULL[i], HULL[i + 1]];
+  // forward of 32 m the hull side stops at the bow platform; aft of it, at the main deck
+  const topZ = Math.min(a[0], b[0]) >= 32 ? P : HULL_TOP;
+  for (let r = 0; r < rings.length - 1; r++) {
+    const r0 = rings[r], r1 = r === rings.length - 2 ? { d: 0, z: topZ } : rings[r + 1];
+    const sideMat = (a[1] + b[1]) / 2 < 3.8 ? M.hullGhost : M.hull;   // port see-through, starboard solid
+    if (r === rings.length - 2) {
+      if (topZ === HULL_TOP) { cabinSide(a[1], sideMat); continue; }
+    }
+    const a0 = inset(a, r0.d), b0 = inset(b, r0.d), a1 = inset(a, r1.d), b1 = inset(b, r1.d);
+    const g = new THREE.BufferGeometry().setFromPoints([S(...a0, r0.z), S(...b0, r0.z), S(...b1, r1.z), S(...a0, r0.z), S(...b1, r1.z), S(...a1, r1.z)]);
+    g.computeVertexNormals();
+    hull.add(new THREE.Mesh(g, sideMat));
+  }
+}
+scene.add(hull);
+
+// the two gold lines on the side, read from the owner's picture. They form a point at
+// the foot of the side stairs, where the side panel meets the bow platform:
+//  1. along the top of the cabin windows, then sloping down beside the side stairs
+//     to their foot, then on along the top of the hull to the bow
+//  2. along cabin-floor level, then sloping up to meet the first at that point
+{
+  const GX = 35.4;                                  // where the side panel comes down to the bow platform
+  const hy = (x) => x <= 32 ? 0 : x >= 41.75 ? 3.604 + (x - 41.75) / .25 * .196 : hullYAt(x);   // port hull side
+  // The upper line keeps one distance below the edge above it all the way: below
+  // the cabin roof (the main-deck floor), below the lip of the side stairs, and
+  // below the edge of the bow platform. So the two lines meet below the bow
+  // platform's level, not at it.
+  const D = MAIN - WIN.z1;                          // 30 cm
+  const LINES = [
+    [[26, MAIN - D], [SIDE_TOP, MAIN - D], [GX, P - D], [42, P - D]],
+    [[26, FLOOR], [GX - 2.6, FLOOR], [GX, P - D]],
+  ];
+  for (const sb of [false, true]) for (const pts of LINES) for (let i = 0; i < pts.length - 1; i++) {
+    const [xa, za] = pts[i], [xb, zb] = pts[i + 1], n = Math.ceil((xb - xa) / .1);
+    for (let j = 0; j < n; j++) {
+      const t0 = j / n, t1 = (j + 1) / n, x0 = xa + (xb - xa) * t0, x1 = xa + (xb - xa) * t1;
+      const y0 = sb ? 7.6 - hy(x0) : hy(x0), y1 = sb ? 7.6 - hy(x1) : hy(x1);
+      rod(S(x0, y0, za + (zb - za) * t0), S(x1, y1, za + (zb - za) * t1), .016, M.gold, hull);
+    }
+  }
+}
+
+// collision bulkhead at 40 m (engineer's plan, 10 mm plate): the forepeak
+// forward of it is a sealed compartment, 2 m from the bow tip
+{
+  const hb = 3.8 - HULL.find((pt) => pt[0] === 40 && pt[1] < 3.8)[1];
+  scene.add(sectionWall(40, hb, P - .12, .1));
+  scene.add(slab(HULL.filter((pt) => pt[0] >= 40).map((pt) => inset(pt, BILGE)), .06, .05, M.bulk));
+}
+
+// main (mid) deck over the cabins, aft of the bulkhead, plus the flat walkways
+// that carry it forward to the top of each side stair
+const mainDeck = new THREE.Group();
+[CABINS, ...WALKS].forEach((pts, i) => { const m = slab(pts, MAIN, .1, i ? M.teak : M.main); m.castShadow = false; mainDeck.add(m); });
+scene.add(mainDeck);
+
+// lower-deck walls, and the bulkhead with a doorway where the hallway meets it
+for (const w of LOWER_WALLS) {
+  const [x1, y1, x2, y2, th, gaps] = w, top = FLOOR + HALL_H;
+  if (!gaps) { scene.add(wall(w, FLOOR, top, M.wall)); continue; }
+  // a wall with doorways: solid pieces between them and a piece over each one
+  const alongY = Math.abs(y2 - y1) > Math.abs(x2 - x1);
+  const seg = (a, b, z0, z1) => scene.add(wall(alongY ? [x1, a, x2, b, th] : [a, y1, b, y2, th], z0, z1, M.wall));
+  let at = alongY ? Math.min(y1, y2) : Math.min(x1, x2);
+  const end = alongY ? Math.max(y1, y2) : Math.max(x1, x2);
+  for (const [g0, g1] of gaps) {
+    if (g0 > at) seg(at, g0, FLOOR, top);
+    seg(g0, g1, FLOOR + DOOR_H, top);
+    at = g1;
+  }
+  if (end > at) seg(at, end, FLOOR, top);
+}
+// beds, toilets, sinks and showers as simple blocks
+for (const [type, x0, x1, y0, y1] of LOWER_FITTINGS) {
+  const blk = (m, xa, xb, ya, yb, z0, z1) => { const b = new THREE.Mesh(new THREE.BoxGeometry(xb - xa, z1 - z0, yb - ya), m); b.position.copy(S((xa + xb) / 2, (ya + yb) / 2, (z0 + z1) / 2)); b.castShadow = b.receiveShadow = true; scene.add(b); };
+  if (type === "bed") {
+    const headLow = y0 < 3.8;                                         // head against the hull side
+    blk(M.wood, x0, x1, y0, y1, FLOOR, FLOOR + .3);
+    blk(M.cream, x0 + .03, x1 - .03, y0 + .03, y1 - .03, FLOOR + .3, FLOOR + .52);
+    blk(M.white, x0 + .15, x1 - .15, headLow ? y0 + .08 : y1 - .48, headLow ? y0 + .48 : y1 - .08, FLOOR + .52, FLOOR + .62);
+  } else if (type === "toilet") {
+    const tankLow = y0 > 3.8;                                         // tank against the hallway wall
+    blk(M.white, x0 + .05, x1 - .05, tankLow ? y0 : y1 - .2, tankLow ? y0 + .2 : y1, FLOOR, FLOOR + .8);
+    blk(M.white, x0 + .05, x1 - .05, tankLow ? y0 + .2 : y0, tankLow ? y1 : y1 - .2, FLOOR, FLOOR + .42);
+  } else if (type === "sink") {
+    blk(M.wood, x0, x1, y0, y1, FLOOR, FLOOR + .82);
+    blk(M.white, x0 - .01, x1 + .01, y0 - .01, y1 + .01, FLOOR + .82, FLOOR + .86);
+    blk(M.grey, x0 + .1, x1 - .1, (y0 + y1) / 2 - .22, (y0 + y1) / 2 + .22, FLOOR + .86, FLOOR + .87);
+  } else if (type === "shower") {
+    blk(M.white, x0, x1, y0, y1, FLOOR, FLOOR + .06);
+    const g = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 2, y1 - y0), M.winGlass);
+    g.position.copy(S((x0 + x1) / 2, (y0 + y1) / 2, FLOOR + 1.06)); scene.add(g);
+  }
+}
+scene.add(sectionWall(32, 3.78, FLOOR, .05));                   // front of the double bottom
+{
+  // full-height pieces between the doorways, and a piece over each doorway
+  let y = 0.02;
+  for (const [d0, d1] of DOORS) {
+    scene.add(wall([32,y,32,d0,.05], FLOOR, MAIN, M.bulk));
+    scene.add(wall([32,d0,32,d1,.05], FLOOR + DOOR_H, MAIN, M.bulk));
+    y = d1;
+  }
+  scene.add(wall([32,y,32,7.58,.05], FLOOR, MAIN, M.bulk));
+}
+
+// solid walls along the two sides of the landing, and the wedge wall beside each
+// side of the flight
+for (const side of [-1, 1]) {                                 // -1 port, +1 starboard
+  const y = 3.8 + side * hw0;                                 // wall line
+  scene.add(wall([32, y, HALL_X0, y, .08], FLOOR, P - .12, M.bulk));
+  // wall beside the flight: from the bottom edge of the stair's side board up to
+  // the underside of the platform, 6 cm outboard of the board so they don't overlap
+  const x0 = hallway.bottom[0], L = steps(hallway) * hallway.stepRun, H = hallway.rise, BOARD_D = .2;
+  const zAt = (x) => FLOOR + (x - x0) * H / L - BOARD_D;             // board's bottom edge
+  const xTop = x0 + (SIDE_WALL_TOP + BOARD_D - FLOOR) * L / H;      // where that edge meets the platform underside
+  const shape = new THREE.Shape([[x0, zAt(x0)], [xTop, SIDE_WALL_TOP], [x0, SIDE_WALL_TOP]].map(([x, z]) => new THREE.Vector2(x - OX, z)));
+  const g = new THREE.ExtrudeGeometry(shape, { depth: .08, bevelEnabled: false });
+  const m = new THREE.Mesh(g, M.bulk);
+  m.position.z = y + side * .06 - OY - .04;                         // outward is -y on port, +y on starboard
+  m.castShadow = m.receiveShadow = true;
+  scene.add(m);
+}
+
+// two 150 kW marine generator sets side by side forward of the stairway (in
+// line they would run through the bulkhead at 40 m): open-frame sets on a Cummins 6CTA8.3 engine, like
+// the one in the owner's photo. Cummins' figures for the 6C-CP marine set, heat-
+// exchanger cooled: 2.40 m long × 1.25 m wide × 1.27 m high, 1,720 kg.
+// Alternator at the aft end, engine amidships, heat-exchanger tank on top,
+// expansion tank at the forward end, black air filter, red exhaust elbow.
+const GEN = { L: 2.4, W: 1.25, H: 1.27, kg: 1720, name: "Cummins 6C-CP (6CTA8.3)" };
+const GENSETS = [{ x: 35.5, y: 3.8 - .3 - GEN.W / 2 }, { x: 35.5, y: 3.8 + .3 + GEN.W / 2 }]; // aft end and centre of each set, 60 cm apart
+for (const g of GENSETS) {
+  const set = new THREE.Group();
+  set.position.copy(S(g.x, g.y, 0));
+  // local: x along the set from its aft end, y up, z across (+z = starboard)
+  const box = (m, l, h, w, x, y, z) => { const b = new THREE.Mesh(new THREE.BoxGeometry(l, h, w), m); b.position.set(x, y, z); set.add(b); return b; };
+  const cyl = (m, r, l, x, y, z, axis = "x") => {
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(r, r, l, 24), m);
+    if (axis === "x") c.rotation.z = Math.PI / 2; else if (axis === "z") c.rotation.x = Math.PI / 2;
+    c.position.set(x, y, z); set.add(c); return c;
+  };
+  const L = GEN.L, W = GEN.W;
+  // skid: two side channels and three cross members, 15 cm deep
+  for (const sgn of [-1, 1]) box(M.tan, L, .15, .12, L / 2, .075, sgn * (W / 2 - .06));
+  for (const x of [.15, L / 2, L - .15]) box(M.tan, .12, .15, W - .24, x, .075, 0);
+  // alternator (aft), with its terminal box on top
+  cyl(M.tan, .33, .75, .5, .55, 0);
+  box(M.tan, .45, .3, .4, .5, .95, 0);
+  box(M.tan, .12, .5, .55, .1, .45, 0);                    // alternator end bell
+  // engine block, head, bell housing to the alternator, and the front cover
+  box(M.tan, 1.05, .8, .72, 1.45, .55, 0);
+  box(M.tan, .95, .22, .5, 1.45, 1.06, 0);
+  cyl(M.tan, .36, .2, .93, .6, 0);
+  box(M.tan, .3, .65, .62, 2.12, .5, 0);
+  // heat-exchanger tank on top, over the port side, with its end caps
+  cyl(M.tan, .17, .95, 1.75, 1.1, -.2);
+  cyl(M.tan, .19, .08, 1.3, 1.1, -.2); cyl(M.tan, .19, .08, 2.2, 1.1, -.2);
+  // expansion tank at the forward end
+  box(M.tan, .3, .45, .55, 2.25, 1.02, .05);
+  // turbo, black air filter and the red exhaust elbow
+  cyl(M.steel, .12, .25, 1.15, 1.0, .3);
+  cyl(M.black, .14, .5, 1.05, 1.1, .34);
+  cyl(M.red, .06, .35, 1.35, 1.1, .12, "y");
+  cyl(M.red, .06, .45, 1.55, 1.27, .0);
+  // fuel filters on the starboard side, and the sea-water pump at the front
+  for (const x of [1.6, 1.8]) cyl(M.steel, .05, .25, x, .95, .45, "y");
+  cyl(M.steel, .09, .15, 2.3, .35, -.25);
+  set.traverse((m) => { if (m.isMesh) m.castShadow = m.receiveShadow = true; });
+  scene.add(set);
+}
+
+// the rest of the machinery, drawn from the owner's photos at assumed sizes (see the
+// notes on the page). Each helper takes the plan position of the item's centre.
+{
+  const add = (m) => { m.traverse((o) => { if (o.isMesh) o.castShadow = o.receiveShadow = true; }); scene.add(m); return m; };
+  const cylV = (mat, r, h, x, y, z0) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 32), mat); c.position.copy(S(x, y, z0 + h / 2)); return c; };
+  const boxAt = (mat, l, w, h, x, y, z0) => { const b = new THREE.Mesh(new THREE.BoxGeometry(l, h, w), mat); b.position.copy(S(x, y, z0 + h / 2)); return b; };
+
+  // fresh-water tank: round corrugated poly tank, 1.5 m across, 1.8 m to the top of
+  // its dome (about 3,000 L), on the centreline ahead of the generators
+  // (moved: the welded steel tank is in its old spot; now port side beside the top of the stairs)
+  const WT = { x: 34.5, y: 1.5, r: .75, h: 1.65 };
+  // existing welded steel gas tank on the centreline, welded to the floor and to
+  // the front wall at 40 m. the owner gives it as about 2 m wide and 1 to 1.5 m high;
+  // drawn 2 m wide, 1.25 m high and an assumed 1 m front to back.
+  M.tank = mat("#5d6a73", { roughness: .55, metalness: .5 });
+  const ST = { x: 39.45, y: 3.8, l: 1.0, w: 2.0, h: 1.25 };
+  add(boxAt(M.tank, ST.l, ST.w, ST.h, ST.x, ST.y, 0));
+  for (const dy of [-.5, 0, .5]) add(boxAt(M.tank, .04, .06, ST.h, ST.x - ST.l / 2 - .02, ST.y + dy, 0));   // stiffeners on the aft face
+  add(cylV(M.dark, .2, .04, ST.x, ST.y, ST.h));                                                              // inspection hatch
+  add(cylV(M.pipe, .04, .2, ST.x + .15, ST.y + .6, ST.h));                                                   // filler pipe
+  tag("Steel gas tank (existing) · 2 × 1 × 1.25 m", ST.x, ST.y, ST.h + .4);
+  // mast: on the centreline directly aft of the steel tank, standing on the bottom
+  // of the boat and passing up through the platform. Diameter and height assumed.
+  const MAST = { x: 38.77, y: 3.8, r: .125, top: 12 };
+  add(cylV(M.white, MAST.r, MAST.top, MAST.x, MAST.y, 0));
+  add(cylV(M.metal, MAST.r + .05, .1, MAST.x, MAST.y, P));       // collar where it passes through the platform
+  tag("Mast · 25 cm across (assumed)", MAST.x, MAST.y, P + 1.6);
+  add(cylV(M.cream, WT.r, WT.h, WT.x, WT.y, 0));
+  for (let z = .15; z < WT.h - .05; z += .1) { const ring = new THREE.Mesh(new THREE.TorusGeometry(WT.r, .012, 8, 48), M.cream); ring.rotation.x = Math.PI / 2; ring.position.copy(S(WT.x, WT.y, z)); add(ring); }
+  { const dome = new THREE.Mesh(new THREE.SphereGeometry(WT.r, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2), M.cream); dome.scale.y = .2; dome.position.copy(S(WT.x, WT.y, WT.h)); add(dome); }
+
+  // calorifier (hot-water tank): 300 L, 60 cm across, 1.6 m tall, port side beside the stairs
+  const CAL = { x: 33.4, y: 1.1 };
+  add(cylV(M.grey, .3, 1.55, CAL.x, CAL.y, .03)); add(cylV(M.dark, .31, .06, CAL.x, CAL.y, 0)); add(cylV(M.dark, .31, .05, CAL.x, CAL.y, 1.58));
+
+  // hydraulic power pack: oil tank 1.2 × 0.6 × 0.6 m with the motor and pump on top,
+  // 1.1 m overall, port side forward of the calorifier
+  // (moved: now under the hallway stairs, port side of the round gas tank, so the
+  // generators' sides are clear)
+  const HP = { x: 34.1, y: 2.85 };
+  add(boxAt(M.dark, 1.2, .7, .6, HP.x, HP.y, .08));
+  for (const dx of [-.5, .5]) for (const dy of [-.28, .28]) add(cylV(M.dark, .06, .08, HP.x + dx, HP.y + dy, 0));
+  { const motor = new THREE.Mesh(new THREE.CylinderGeometry(.16, .16, .45, 24), M.grey); motor.rotation.z = Math.PI / 2; motor.position.copy(S(HP.x - .3, HP.y, .68 + .17)); add(motor); }
+  { const pump = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, .3, 24), M.dark); pump.rotation.z = Math.PI / 2; pump.position.copy(S(HP.x + .12, HP.y, .68 + .15)); add(pump); }
+  add(boxAt(M.dark, .2, .2, .2, HP.x + .4, HP.y - .15, .68));
+  add(cylV(M.white, .06, .02, HP.x + .4, HP.y + .15, .9));
+  add(cylV(M.blue, .04, .18, HP.x + .2, HP.y + .25, .68));
+
+  // septic (black-water) tank: 1.2 × 0.8 × 0.8 m poly tank on a pallet, with two
+  // inspection lids and a vertical vent/filter pipe beside it, outboard of the
+  // starboard generator
+  // (moved: now under the hallway stairs, starboard side of the round gas tank)
+  const SP = { x: 34.1, y: 4.75 };
+  add(boxAt(M.wood, 1.2, .8, .14, SP.x, SP.y, 0));
+  add(boxAt(M.dark, 1.2, .8, .8, SP.x, SP.y, .14));
+  for (const dx of [-.3, .3]) { add(cylV(M.dark, .16, .04, SP.x + dx, SP.y, .94)); add(cylV(M.blue, .17, .02, SP.x + dx, SP.y, .98)); }
+  add(cylV(M.pipe, .1, .9, SP.x - .75, SP.y + .25, 0));
+  { const el = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .25, 16), M.pipe); el.rotation.z = Math.PI / 2; el.position.copy(S(SP.x - .62, SP.y + .25, .7)); add(el); }
+
+  // water filter (from the photo): an inline unit with a horizontal blue pressure
+  // vessel, 0.5 m across and 1.1 m long between its flanges, on a steel stand,
+  // with the pipe manifold below, a chrome drive at the forward end, actuator and
+  // gauge. About 1.9 m long, 0.6 m wide, 1.3 m tall. Starboard strip beside the
+  // stairs, fore and aft.
+  const WF = { x: 33.3, y: 6.45, z: .95 };
+  const cylX = (mat, r, l, x, y, z) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(r, r, l, 32), mat); c.rotation.z = Math.PI / 2; c.position.copy(S(x, y, z)); return c; };
+  add(cylX(M.blue, .26, 1.1, WF.x, WF.y, WF.z));
+  for (const dx of [-.58, .58]) add(cylX(M.blue, .31, .06, WF.x + dx, WF.y, WF.z));
+  for (const dx of [-.25, .25]) add(cylX(M.white, .268, .07, WF.x + dx, WF.y, WF.z));
+  for (const dx of [-.4, .4]) { add(boxAt(M.steel, .08, .5, WF.z - .26, WF.x + dx, WF.y, 0)); add(boxAt(M.steel, .2, .56, .03, WF.x + dx, WF.y, 0)); }
+  add(cylX(M.steel, .12, .45, WF.x + .85, WF.y, WF.z));              // chrome drive cylinder
+  add(cylX(M.blue, .09, .18, WF.x + 1.12, WF.y, WF.z));             // its motor
+  add(cylX(M.pipe, .08, 1.9, WF.x, WF.y, .3));                      // pipe run below
+  for (const dx of [-.7, .15, .8]) add(cylX(M.steel, .11, .04, WF.x + dx, WF.y, .3));
+  add(cylV(M.pipe, .07, WF.z - .3 - .2, WF.x - .1, WF.y, .3));      // riser into the vessel
+  add(boxAt(M.dark, .18, .18, .18, WF.x - .45, WF.y + .18, .4));    // actuator on the pipe
+  add(cylV(M.white, .05, .03, WF.x - .05, WF.y, WF.z + .28));       // gauge
+  add(cylV(M.pipe, .02, .1, WF.x - .05, WF.y, WF.z + .2));
+
+  // gas tank: 1,000 L horizontal cylinder, 2 m long and 1 m across, on two
+  // saddles under the stairs, fore and aft on the centreline
+  const GT = { x: 34.4, y: 3.8, r: .5, L: 2.0 };
+  { const body = new THREE.Mesh(new THREE.CylinderGeometry(GT.r, GT.r, GT.L - 2 * GT.r * .3, 32), M.white); body.rotation.z = Math.PI / 2; body.position.copy(S(GT.x, GT.y, .15 + GT.r)); add(body); }
+  for (const sgn of [-1, 1]) { const cap = new THREE.Mesh(new THREE.SphereGeometry(GT.r, 32, 16), M.white); cap.scale.x = .3; cap.position.copy(S(GT.x + sgn * (GT.L / 2 - GT.r * .3), GT.y, .15 + GT.r)); add(cap); }
+  for (const dx of [-.6, .6]) add(boxAt(M.dark, .2, 1.0, .25, GT.x + dx, GT.y, 0));
+  add(cylV(M.pipe, .05, .12, GT.x, GT.y, .15 + 2 * GT.r));
+
+  tag("Fresh-water tank · 1.5 m dia · ~3,000 L", WT.x, WT.y, 2.0);
+  tag("Hot-water tank · 300 L", CAL.x, CAL.y, 1.9);
+  tag("Hydraulic power pack", HP.x, HP.y, 1.3);
+  tag("Septic tank · 1.2 × 0.8 m", SP.x, SP.y, 1.3);
+  tag("Water filter · 1.9 × 0.6 m", WF.x, WF.y, 1.6);
+  tag("Gas tank · 1,000 L · 2 × 1 m", GT.x, GT.y, 1.45);
+}
+
+// four support columns under the flight, 12 cm square, from the engine-room
+// floor: two at the front corners up to the platform underside, two at the
+// landing's forward corners up to the landing's underside
+{
+  const col = (x, y, z1) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(.12, z1, .12), M.metal);
+    m.position.copy(S(x, y, z1 / 2)); m.castShadow = m.receiveShadow = true; scene.add(m);
+  };
+  for (const side of [-1, 1]) {
+    const yEdge = 3.8 + side * (hallway.wB / 2 - .06);                // 6 cm inside the stair's edge
+    col(HALL_TOP - .1, yEdge, P - .12);
+    col(HALL_X0 - .06, yEdge, FLOOR - .08);
+  }
+}
+
+// stairs, open underneath: a tread per step on two side boards. Local x runs up
+// the flight from the centre of its bottom edge, z across it. A flight that
+// widens toward the top has angled side boards.
+for (const s of STAIRS) {
+  const n = steps(s), a = s.rise / n;
+  const [dx, dy] = s.dir, [bx, by] = s.bottom;
+  const material = M.teakPlain;   // same teak as the side stairs and the bow platform
+  const flight = new THREE.Group();
+  flight.position.copy(S(bx, by, s.base));
+  flight.rotation.y = -Math.atan2(dy, dx);
+  const TREAD = .04, BOARD_D = .2;
+  for (let k = 1; k <= n; k++) {
+    // the last step up is the platform itself, so it gets a riser but no tread
+    if (k < n) {
+      const t = new THREE.Mesh(new THREE.BoxGeometry(s.stepRun, TREAD, widthAt(s, k - .5)), material);
+      t.position.set((k - .5) * s.stepRun, k * a - TREAD / 2, 0);
+      flight.add(t);
+    }
+    // a closed flight has a riser board at the front of each tread, so there are no
+    // gaps between the steps; the space under the flight stays open
+    if (s.closed) {
+      const r = new THREE.Mesh(new THREE.BoxGeometry(TREAD, a, widthAt(s, k - .5)), M.wall);   // white riser, like the side stairs
+      r.position.set((k - 1) * s.stepRun + TREAD / 2, (k - .5) * a, 0);
+      flight.add(r);
+      // light strip under each step, on the face of the riser
+      const led = new THREE.Mesh(new THREE.BoxGeometry(.012, .014, widthAt(s, k - .5) - .1), M.led);
+      led.position.set((k - 1) * s.stepRun - .006, k * a - TREAD - .012, 0);
+      flight.add(led);
+    }
+  }
+  const L = (n - 1) * s.stepRun, H = (n - 1) * a;
+  for (const side of [-1, 1]) {
+    // board from the foot to the top, its top edge along the tread ends, 20 cm deep
+    const z0 = side * s.wB / 2, z1 = side * s.wT / 2;
+    const q = [[0, 0, z0], [L, H, z1], [L, H - BOARD_D, z1], [0, -BOARD_D + .02, z0]].map(([x, y, z]) => new THREE.Vector3(x, Math.max(y, -s.base + .01), z));
+    const g = new THREE.BufferGeometry().setFromPoints([q[0], q[1], q[2], q[0], q[2], q[3]]);
+    g.computeVertexNormals();
+    flight.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: material.color, roughness: .85, side: THREE.DoubleSide })));
+  }
+  flight.traverse((m) => { m.castShadow = m.receiveShadow = true; });
+  scene.add(flight);
+  const wTxt = s.wB === s.wT ? `${s.wT.toFixed(1)} m wide` : `${s.wB.toFixed(1)}→${s.wT.toFixed(1)} m wide`;
+  tag(`${s.name} · ${n} × ${(a * 100).toFixed(2).replace(/\.?0+$/, "")} cm · ${n - 1} treads of ${(s.stepRun * 100).toFixed(0)} cm · ${wTxt}`, bx + dx * L / 2, by + dy * L / 2, s.base + s.rise + .35);
+}
+
+// side stairs from the bow platform up to the main deck, climbing aft. Each tread
+// runs from the edge of the hallway-stair opening out to the hull side, so its
+// outer end follows the hull's curve. Open underneath, a board along each edge.
+{
+  // Closed in, so the space beneath is a compartment: teak treads with a small
+  // overhang, white closed risers with a light strip under each step, and on the
+  // side facing the central stairway a white wall that rises just above the steps
+  // and carries a glass panel with a slim handrail. That wall has a recess facing
+  // the central stairway; the starboard one holds the fire hose box.
+  const a = (MAIN - P) / SIDE_N, pitch = a / SIDE_RUN, TREAD = .04, NOSE = .03;
+  const WALL_TH = .08, UP = .05, GLASS_H = .95, AFT = 32.03;
+  const wallTop = (x) => (x >= SIDE_TOP ? P + a + pitch * (HALL_TOP - x) : MAIN) + UP;   // top of the solid wall
+  const NICHE = { x0: 33.35, x1: 34.05, z0: 2.52, z1: 2.96, d: .2 };
+  const tube = (p0, p1, r, m) => {
+    const d = new THREE.Vector3().subVectors(p1, p0);
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(r, r, d.length(), 12), m);
+    c.position.copy(p0).addScaledVector(d, .5);
+    c.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize());
+    c.castShadow = true; scene.add(c);
+  };
+  for (const sb of [false, true]) {                 // port, then starboard (mirrored)
+    const Y = (y) => sb ? 7.6 - y : y;
+    const box = (m, xc, yc, zc, lx, ly, lz) => { const b = new THREE.Mesh(new THREE.BoxGeometry(lx, lz, ly), m); b.position.copy(S(xc, Y(yc), zc)); b.castShadow = b.receiveShadow = true; scene.add(b); return b; };
+    // steps: the last step up is the walkway itself, so SIDE_N risers and SIDE_N - 1 treads
+    for (let k = 1; k <= SIDE_N; k++) {
+      const x1 = HALL_TOP - (k - 1) * SIDE_RUN, x0 = x1 - SIDE_RUN, xm = (x0 + x1) / 2;
+      const under = k < SIDE_N ? P + k * a - TREAD : MAIN - .1;      // underside of the tread or walkway above this riser
+      // the steps stop 1 cm short of the hull side and end inside the inner wall, so
+      // no two surfaces share a plane (that is what made the walls flash)
+      const hyi = (x) => hullYAt(x) + .01, IN = SIDE_IN - WALL_TH / 2;
+      const strip = (xa, xb) => [[xa, hyi(xa)], [xb, hyi(xb)], [xb, IN], [xa, IN]].map(([x, y]) => [x, Y(y)]);
+      scene.add(slab(strip(x1 - .02, x1), under, under - (P + (k - 1) * a), M.wall));               // closed riser
+      const led = slab(strip(x1, x1 + .015), under, .012, M.led); led.castShadow = false; scene.add(led);  // light strip under the nosing
+      if (k < SIDE_N) {
+        const pts = [[x0, hyi(x0)], [xm, hyi(xm)], [x1, hyi(x1)], [x1 + NOSE, hyi(x1 + NOSE)], [x1 + NOSE, IN], [x0, IN]].map(([x, y]) => [x, Y(y)]);
+        scene.add(slab(pts, P + k * a, TREAD, M.teak));
+      }
+    }
+    // wall facing the central stairway, with the opening for the recess
+    {
+      const v2 = ([x, z]) => new THREE.Vector2(x - OX, z);
+      const shape = new THREE.Shape([[AFT, P - .12], [HALL_TOP, P - .12], [HALL_TOP, wallTop(HALL_TOP)], [SIDE_TOP, wallTop(SIDE_TOP)], [AFT, wallTop(AFT)]].map(v2));
+      shape.holes.push(new THREE.Path([[NICHE.x0, NICHE.z0], [NICHE.x1, NICHE.z0], [NICHE.x1, NICHE.z1], [NICHE.x0, NICHE.z1]].map(v2)));
+      // 1 cm proud of the edge of the platform and walkway, so its face covers their edges
+      const w = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: WALL_TH + .01, bevelEnabled: false }), M.wall);
+      w.position.z = (sb ? 7.6 - SIDE_IN - .01 : SIDE_IN - WALL_TH) - OY;
+      w.castShadow = w.receiveShadow = true;
+      scene.add(w);
+    }
+    // the recess: an open-fronted box set 20 cm into the wall, lit from the top
+    {
+      const N = NICHE, xc = (N.x0 + N.x1) / 2, zc = (N.z0 + N.z1) / 2, lx = N.x1 - N.x0, lz = N.z1 - N.z0, yc = SIDE_IN - N.d / 2;
+      box(M.bulk, xc, SIDE_IN - N.d, zc, lx + .04, .02, lz + .04);                 // back
+      for (const z of [N.z0 - .01, N.z1 + .01]) box(M.bulk, xc, yc, z, lx + .04, N.d, .02);
+      for (const x of [N.x0 - .01, N.x1 + .01]) box(M.bulk, x, yc, zc, .02, N.d, lz);
+      box(M.led, xc, yc, N.z1 - .012, lx - .1, .03, .012).castShadow = false;
+      if (sb) {                                                                    // fire hose box, starboard recess only
+        box(M.hose, xc, SIDE_IN - .11, zc, .5, .14, .36);
+        box(M.white, xc, SIDE_IN - .035, zc, .3, .012, .2);
+        tag("Fire hose box", xc, Y(SIDE_IN), N.z1 + .25);
+      } else tag("Recess", xc, Y(SIDE_IN), N.z1 + .25);
+    }
+    // glass panel and handrail on top of that wall, along the stairs and the walkway
+    {
+      const yg = SIDE_IN - WALL_TH / 2, xs = [HALL_TOP, SIDE_TOP, AFT], v = [];
+      for (let i = 0; i < 2; i++) {
+        const [xa, xb] = [xs[i], xs[i + 1]];
+        const q = [S(xa, Y(yg), wallTop(xa)), S(xb, Y(yg), wallTop(xb)), S(xb, Y(yg), wallTop(xb) + GLASS_H), S(xa, Y(yg), wallTop(xa) + GLASS_H)];
+        v.push(q[0], q[1], q[2], q[0], q[2], q[3]);
+        tube(q[3], q[2], .022, M.steel);
+      }
+      const g = new THREE.BufferGeometry().setFromPoints(v);
+      g.computeVertexNormals();
+      scene.add(new THREE.Mesh(g, M.glass));
+    }
+    // small door at the stern end of that wall, into the compartment under the
+    // side stairs: 60 × 75 cm, between the platform and the walkway, drawn closed
+    box(M.door, 32.4, SIDE_IN + .015, 2.895, .56, .03, .75);
+    box(M.metal, 32.62, SIDE_IN + .04, 2.9, .03, .03, .12);
+    tag("Small door · 60 × 75 cm", 32.4, Y(SIDE_IN), MAIN + .25);
+    // side of the boat, as in the owner's picture: a solid panel level with the main
+    // deck over the walkway, then sloping straight down to the bow platform just
+    // forward of the stairs' foot, with a gold line along its top edge. On top of
+    // it, beside the stairs and walkway, a glass rail like the inner one.
+    {
+      const X1 = 35.4, top = (x) => x <= SIDE_TOP ? MAIN : Math.max(P, MAIN - (MAIN - P) * (x - SIDE_TOP) / (X1 - SIDE_TOP));
+      const xs = []; for (let i = 0; 32 + i * .1 < X1 - 1e-6; i++) xs.push(32 + i * .1); xs.push(X1);
+      const wv = [], gv = [];
+      for (let i = 0; i < xs.length - 1; i++) {
+        const xa = xs[i], xb = xs[i + 1], ya = Y(hullYAt(xa)), yb = Y(hullYAt(xb));
+        const q = [S(xa, ya, P), S(xb, yb, P), S(xb, yb, top(xb)), S(xa, ya, top(xa))];
+        wv.push(q[0], q[1], q[2], q[0], q[2], q[3]);
+        if (xb <= HALL_TOP + 1e-6) {
+          const g0 = S(xa, ya, top(xa) + GLASS_H), g1 = S(xb, yb, top(xb) + GLASS_H);
+          gv.push(q[3], q[2], g1, q[3], g1, g0);
+          tube(g0, g1, .022, M.steel);
+        }
+      }
+      // the same glass rail carries on aft along the edge of the main deck
+      {
+        const p0 = S(26, Y(0), MAIN), p1 = S(32, Y(0), MAIN), g0 = S(26, Y(0), MAIN + GLASS_H), g1 = S(32, Y(0), MAIN + GLASS_H);
+        gv.push(p0, p1, g1, p0, g1, g0);
+        tube(g0, g1, .022, M.steel);
+      }
+      const wg = new THREE.BufferGeometry().setFromPoints(wv); wg.computeVertexNormals();
+      hull.add(new THREE.Mesh(wg, sb ? M.hull : M.hullGhost));
+      const gg = new THREE.BufferGeometry().setFromPoints(gv); gg.computeVertexNormals();
+      scene.add(new THREE.Mesh(gg, M.glass));
+    }
+    tag(`Mid-deck stairs · ${SIDE_N} × ${(a * 100).toFixed(0)} cm · ${SIDE_N - 1} treads of ${(SIDE_RUN * 100).toFixed(0)} cm · closed in, 1.9–2.2 m wide`, HALL_TOP - SIDE_LEN / 2, Y(1.3), MAIN + 1.3);
+  }
+  // glass rail across the front edge of the main deck, between the two side
+  // stairs' inner handrails, above the hallway doorway
+  {
+    const top = wallTop(AFT) + GLASS_H, yg = SIDE_IN - WALL_TH / 2;
+    const q = [S(AFT, yg, MAIN), S(AFT, 7.6 - yg, MAIN), S(AFT, 7.6 - yg, top), S(AFT, yg, top)];
+    const g = new THREE.BufferGeometry().setFromPoints([q[0], q[1], q[2], q[0], q[2], q[3]]);
+    g.computeVertexNormals();
+    scene.add(new THREE.Mesh(g, M.glass));
+    tube(q[3], q[2], .022, M.steel);
+  }
+}
+
+tag("Lower-deck hallway", 28, 3.78, FLOOR + HALL_H + .25);
+tag("Landing · 80 cm", 32.4, 3.8, FLOOR + .3);
+tag("Flat walkway · main-deck height", 32.6, 1.1, MAIN + .3);
+tag("Bow platform · 2.50 m up", 38.5, 3.8, P + .3);
+tag("Double bottom · 1.0 m", 30.5, 1.2, .5);
+tag("Engine room · open, 2.5 m high", 37, 5.6, 1.1);
+tag("Sealed forepeak · bulkhead at 40 m", 41, 3.8, 1.2);
+tag("Bulkhead · 32 m", 32, 6.9, MAIN + .3);
+tag("Main deck · 3.50 m up", 28, 1.2, MAIN + .35);
+
+// helm station on the bow platform, right behind the mast: open, with no walls.
+// Its roof is a triangular canvas sail: two corners on a V of slim poles that
+// start together behind the seat, the third tied to the mast a little lower, so
+// the canvas tilts slightly down towards the bow.
+const helm = new THREE.Group();
+{
+  const BASE = P;                                                             // everything stands straight on the deck
+  const MAST_AFT = 38.77 - .125;                                              // aft face of the mast
+  // sail corners [x, y, height]: two on the tops of the posts, one tied to the
+  // mast 15 cm lower, so the canvas tilts slightly down towards the bow
+  const AX = 37.0, ZA = P + 2.05, CX = MAST_AFT - .12, ZC = ZA - .15;
+  const A = [AX, 2.8, ZA], B = [AX, 4.8, ZA], C = [CX, 3.8, ZC];
+  const add = (m, shadow = true) => { m.castShadow = m.receiveShadow = shadow; helm.add(m); return m; };
+  const blk = (mat, xa, xb, ya, yb, z0, z1) => { const b = new THREE.Mesh(new THREE.BoxGeometry(xb - xa, z1 - z0, yb - ya), mat); b.position.copy(S((xa + xb) / 2, (ya + yb) / 2, (z0 + z1) / 2)); return add(b); };
+
+  // the canvas: a triangle pulled tight between its three corners, so each edge
+  // curves inward and the middle sags a little, with a thin wire along the edges
+  {
+    const V = (p) => new THREE.Vector3(p[0], p[1], p[2]), a = V(A), b = V(B), c = V(C);
+    const mid = a.clone().add(b).add(c).divideScalar(3);
+    const edge = (p, q) => { const out = []; for (let i = 0; i <= 14; i++) { const t = i / 14, pt = p.clone().lerp(q, t); pt.lerp(mid, .2 * 4 * t * (1 - t)); out.push(pt); } return out; };
+    const ring = [...edge(a, b), ...edge(b, c).slice(1), ...edge(c, a).slice(1, -1)];
+    const W = (p) => S(p.x, p.y, p.z), centre = S(mid.x, mid.y, mid.z - .07), v = [];
+    ring.forEach((p, i) => { const q = ring[(i + 1) % ring.length]; v.push(centre, W(p), W(q)); rod(W(p), W(q), .008, M.steel, helm); });
+    const g = new THREE.BufferGeometry().setFromPoints(v); g.computeVertexNormals();
+    // khaki brown, unlit, so the underside shows exactly the same colour as the top
+    add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: "#9c8459", side: THREE.DoubleSide })), false).castShadow = true;
+  }
+  // two slim steel poles in a V: feet 30 cm apart right behind the seat, spreading
+  // to 2.2 m apart at the top, each with a short wire to its corner of the canvas;
+  // a collar and a wire tie the third corner to the mast
+  for (const p of [A, B]) {
+    const out = p[1] < 3.8 ? -1 : 1, top = S(p[0] - .1, p[1] + out * .1, p[2] + .08);
+    rod(S(37.24, 3.8 + out * .15, P), top, .035, M.steel, helm);
+    rod(top, S(p[0], p[1], p[2]), .008, M.steel, helm);
+  }
+  rod(S(C[0], C[1], C[2]), S(MAST_AFT, 3.8, ZC + .04), .008, M.steel, helm);
+  rod(S(38.77, 3.8, ZC), S(38.77, 3.8, ZC + .08), .15, M.steel, helm);
+  // steering console with the wheel, and the helm seat
+  blk(M.teak, 38.0, 38.4, 3.2, 4.4, BASE, P + 1.05);                          // same teak as the deck
+  blk(M.dark, 37.98, 38.42, 3.18, 4.42, P + 1.05, P + 1.08);
+  {
+    const zc = P + 1.12, xw = 37.92;
+    const wheel = add(new THREE.Mesh(new THREE.TorusGeometry(.26, .025, 10, 36), M.wood)); wheel.rotation.y = Math.PI / 2; wheel.position.copy(S(xw, 3.8, zc));
+    rod(S(xw - .03, 3.8, zc), S(38.0, 3.8, zc), .04, M.steel, helm);
+    for (const deg of [90, 210, 330]) { const t = deg * Math.PI / 180; rod(S(xw, 3.8, zc), S(xw, 3.8 + .26 * Math.cos(t), zc + .26 * Math.sin(t)), .012, M.steel, helm); }
+  }
+  // helm seat: one curved shell in pale leather, seat sweeping up into a slim
+  // raked back, on a single polished pedestal with a round foot
+  {
+    const xF = 37.8, xB = 37.38, zS = P + .64, zT = P + 1.32, T = .06, W = .46;
+    const sh = new THREE.Shape();
+    const p = (x, z) => [x - OX, z];
+    sh.moveTo(...p(xF, zS - T));
+    sh.lineTo(...p(xB + .12, zS - T));
+    sh.quadraticCurveTo(...p(xB - .02, zS - T), ...p(xB - .05, zS + .2));
+    sh.lineTo(...p(xB - .13, zT));
+    sh.lineTo(...p(xB - .07, zT));
+    sh.lineTo(...p(xB + .01, zS + .22));
+    sh.quadraticCurveTo(...p(xB + .04, zS), ...p(xB + .16, zS));
+    sh.lineTo(...p(xF, zS));
+    sh.closePath();
+    const shell = add(new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: W, bevelEnabled: true, bevelSize: .015, bevelThickness: .015, bevelSegments: 3, curveSegments: 16 }), mat("#ece4d6", { roughness: .45 })));
+    shell.position.z = 3.8 - W / 2 - OY;
+    rod(S(37.6, 3.8, P), S(37.6, 3.8, zS - T), .04, M.steel, helm);          // pedestal
+    rod(S(37.6, 3.8, P), S(37.6, 3.8, P + .02), .2, M.steel, helm);          // round foot
+    rod(S(37.6, 3.8, zS - T - .03), S(37.6, 3.8, zS - T), .12, M.steel, helm); // plate under the seat
+  }
+  tag("Helm station · open, canvas sail roof", 37.8, 3.8, ZA + 1.3);
+}
+scene.add(helm);
+
+/* ---------- views ---------- */
+const VIEWS = {
+  overview: { pos: S(30.5, -4.5, 9.5), at: S(34.2, 3.8, 1.4) },
+  hall:     { pos: S(28.4, 3.78, FLOOR + 1.6), at: S(34, 3.78, FLOOR + 1.3) },
+  top:      { pos: S(33.6, 3.81, 16),  at: S(33.6, 3.8, 1) },
+  side:     { pos: S(33.5, 24, 4.2),   at: S(33.5, 3.8, 2.4) },   // from starboard, bow to the right, as in the owner's picture
+};
+function go(name) {
+  const v = VIEWS[name];
+  camera.position.copy(v.pos);
+  controls.target.copy(v.at);
+  controls.update();
+  for (const k of Object.keys(VIEWS)) document.getElementById("v-" + k).setAttribute("aria-pressed", String(k === name));
+}
+for (const k of Object.keys(VIEWS)) document.getElementById("v-" + k).addEventListener("click", () => go(k));
+document.getElementById("t-hull").addEventListener("change", (e) => { hull.visible = e.target.checked; });
+document.getElementById("t-main").addEventListener("change", (e) => { mainDeck.visible = e.target.checked; });
+document.getElementById("t-plat").addEventListener("change", (e) => { platform.visible = helm.visible = e.target.checked; });
+document.getElementById("t-tags").addEventListener("change", (e) => { labels.domElement.hidden = !e.target.checked; });
+
+function resize() {
+  const { clientWidth: w, clientHeight: h } = host;
+  renderer.setSize(w, h);
+  labels.setSize(w, h);
+  camera.aspect = w / Math.max(h, 1);
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(host);
+resize();
+go("overview");
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); labels.render(scene, camera); });
+</script>
+
+</body>
+</html>
